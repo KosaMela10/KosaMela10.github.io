@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kávépiaci Összehasonlító Analitika</title>
+    <!-- Inter Font és Tailwind CSS CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Egyedi kávé/mokkaszínű háttér és betűtípus */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #362518; /* Mély Espresso barna */
+            color: #e9e4d5; /* Krém színű szöveg */
+            
+            /* Finom, ismétlődő kávészem textúra a háttéren */
+            background-image: radial-gradient(circle at 10% 20%, #6b5a4a 1px, transparent 0.5px);
+            background-size: 15px 15px; 
+        }
+        /* Chart konténer a fix magassághoz */
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        /* Görgetősáv stílus */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #6b5a4a; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #362518; }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+
+<!-- Header (Sötétebb barna, arany csíkkal) -->
+<header class="bg-[#2a1d13] shadow-lg sticky top-0 z-10 border-b-4 border-[#d4a373]">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <h1 class="text-3xl font-extrabold text-[#d4a373] tracking-wider text-center">
+            ☕ Kávépiac Összehasonlítás
+        </h1>
+    </div>
+</header>
+
+<!-- Fő tartalom (Kártyák egymás alatt) -->
+<main class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 mt-6">
+
+    <!-- 1. Kávéfogyasztás összehasonlítása 5 országban (Bar Chart) -->
+    <div class="bg-[#4a3528] rounded-xl shadow-2xl hover:shadow-inner transition duration-300 ease-in-out p-6 border-2 border-[#6b5a4a]">
+        <h2 class="text-xl font-bold text-[#d4a373] mb-2 text-center">📊 Éves Kávéfogyasztás Összehasonlítása (2024)</h2>
+        <p class="text-sm text-[#e9e4d5] mb-4 text-center italic opacity-80">
+            Az egy főre eső átlagos kávéfogyasztás (kg/fő) Közép- és Kelet-Európa kiválasztott országaiban (becslés).
+        </p>
+        <div class="chart-container">
+            <canvas id="countryComparisonChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 2. Kávépiac Bevétel Megoszlás Romániában (Doughnut Chart) -->
+    <div class="bg-[#4a3528] rounded-xl shadow-2xl hover:shadow-inner transition duration-300 ease-in-out p-6 border-2 border-[#6b5a4a]">
+        <h2 class="text-xl font-bold text-[#d4a373] mb-2 text-center">🥧 Kávépiaci Bevétel Megoszlás Romániában (2024)</h2>
+        <p class="text-sm text-[#e9e4d5] mb-4 text-center italic opacity-80">
+            A teljes piaci bevétel megoszlása az otthoni és a vendéglátóipari (Out-of-Home) fogyasztás között (%).
+        </p>
+        <div class="chart-container flex items-center justify-center">
+            <canvas id="revenueShareChart" class="max-w-xs"></canvas>
+        </div>
+    </div>
+
+    <!-- 3. Kávézó Szegmens Növekedési Üteme (Bar Chart) -->
+    <div class="bg-[#4a3528] rounded-xl shadow-2xl hover:shadow-inner transition duration-300 ease-in-out p-6 border-2 border-[#6b5a4a]">
+        <h2 class="text-xl font-bold text-[#d4a373] mb-2 text-center">📈 Kávézó Szegmens Várható Növekedése (CAGR%)</h2>
+        <p class="text-sm text-[#e9e4d5] mb-4 text-center italic opacity-80">
+            A Kávézó (Out-of-Home) szegmens várható éves növekedési rátája (CAGR%) 2024 és 2028 között.
+        </p>
+        <div class="chart-container">
+            <canvas id="growthRateChart"></canvas>
+        </div>
+    </div>
+
+</main>
+
+<!-- Lábléc (Sötétebb barna) -->
+<footer class="mt-8 py-4 text-center text-xs text-[#a1887f] bg-[#2a1d13] border-t border-[#6b5a4a]">
+    © 2025☕
+</footer>
+
+<script>
+    // --- ÚJ ADATOK: ÖSSZEHASONLÍTÓ ANALITIKA ---
+
+    // Kávé témához illeszkedő Színpaletta 
+    const colors = {
+        // Alap színek
+        Mocha: '#795548',
+        Caramel: '#a1887f',
+        Crema: '#d4a373',
+        Espresso: '#6a4a3c',
+        Tan: '#b08968',
+        White: '#e9e4d5'
+    };
+
+    // Globális Chart.js opciók (Sötét/Kávé Téma beállításokkal)
+    const chartGlobalOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    color: colors.White, 
+                    font: { size: 14, weight: '600' }
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: { color: 'rgba(233, 228, 213, 0.1)' }, 
+                ticks: { color: colors.White } 
+            },
+            y: {
+                grid: { color: 'rgba(233, 228, 213, 0.1)' }, 
+                ticks: { color: colors.White } 
+            }
+        }
+    };
+
+    // --- 1. Kávéfogyasztás Összehasonlítása (Bar Chart) ---
+    const comparisonData = {
+        labels: ['Románia', 'Magyarország', 'Bulgária', 'Lengyelország', 'Csehország'],
+        // Az adatok a forrásokból származó becslések átlagán alapulnak (kg/fő, 2024 becslés)
+        consumption: [4.6, 3.6, 5.1, 4.0, 5.5],
+        backgrounds: [colors.Mocha, colors.Caramel, colors.Crema, colors.Espresso, colors.Tan]
+    };
+
+    const ctx1 = document.getElementById('countryComparisonChart');
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: comparisonData.labels,
+            datasets: [{
+                label: 'Fogyasztás (kg/fő)',
+                data: comparisonData.consumption,
+                backgroundColor: comparisonData.backgrounds,
+                borderColor: colors.White,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...chartGlobalOptions,
+            scales: {
+                ...chartGlobalOptions.scales,
+                y: {
+                    ...chartGlobalOptions.scales.y,
+                    min: 0,
+                    max: 7,
+                    title: { display: true, text: 'Kg/Fő/Év', color: colors.Crema }
+                }
+            }
+        }
+    });
+
+    // --- 2. Kávépiac Bevétel Megoszlás Romániában (Doughnut Chart) ---
+    const revenueData = {
+        labels: ['Otthoni Fogyasztás (At-Home)', 'Kávézó Fogyasztás (Out-of-Home)'],
+        // Becslés: A legtöbb kávé fogyasztás otthon történik, de a bevételek nagy része a vendéglátásból származik a magasabb árak miatt.
+        data: [40, 60], // Megoszlás Bevétel szerint %-ban
+        backgrounds: [colors.Mocha, colors.Crema]
+    };
+
+    const ctx2 = document.getElementById('revenueShareChart');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: revenueData.labels,
+            datasets: [{
+                label: 'Bevételi Arány (%)',
+                data: revenueData.data,
+                backgroundColor: revenueData.backgrounds,
+                hoverOffset: 10,
+                borderColor: '#362518', // megegyezik a body háttérrel
+                borderWidth: 5
+            }]
+        },
+        options: {
+            ...chartGlobalOptions,
+            plugins: {
+                ...chartGlobalOptions.plugins,
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += context.parsed + '%';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // --- 3. Kávézó Szegmens Növekedési Üteme (Bar Chart) ---
+    const growthRateData = {
+        labels: ['Románia', 'Magyarország', 'Bulgária'],
+        // Becsült CAGR% 2024-2028-ra (A romániai kávézó piac a leggyorsabban növekvőnek számít a régióban)
+        cagr: [8.5, 5.0, 6.2],
+    };
+
+    const ctx3 = document.getElementById('growthRateChart');
+    new Chart(ctx3, {
+        type: 'bar', // VÁLTOZTATÁS: Line Chart helyett Bar Chart
+        data: {
+            labels: growthRateData.labels,
+            datasets: [{
+                label: 'Várható Növekedés (CAGR %)',
+                data: growthRateData.cagr,
+                // Színek beállítása a Bar Chart-hoz a korábbi palettáról
+                backgroundColor: [colors.Crema, colors.Caramel, colors.Mocha], 
+                borderColor: colors.White,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...chartGlobalOptions,
+            plugins: {
+                 ...chartGlobalOptions.plugins,
+                 legend: { display: false } // Egy datasetnél felesleges a legenda
+            },
+            scales: {
+                ...chartGlobalOptions.scales,
+                y: {
+                    ...chartGlobalOptions.scales.y,
+                    min: 0,
+                    max: 10,
+                    title: { display: true, text: 'CAGR (%)', color: colors.Crema },
+                    ticks: {
+                        callback: function(value) { return value + '%'; }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
