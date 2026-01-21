@@ -3,218 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kávépiaci Adatbázis & Analitika</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <title>Kávépiaci Adatbázis 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a120b; /* Sötétebb, prémium háttér */
-            color: #e9e4d5;
-            background-image: radial-gradient(circle at 10% 20%, #2c1e14 1px, transparent 0.5px);
-            background-size: 20px 20px;
-        }
-        .glass-card {
-            background: rgba(74, 53, 40, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(212, 163, 115, 0.2);
-            transition: transform 0.2s ease;
-        }
-        .glass-card:hover { transform: translateY(-5px); }
-        .chart-container { position: relative; height: 320px; width: 100%; }
+        body { background-color: #120b06; color: #f3ece4; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(43, 29, 20, 0.8); border: 1px solid #d4a373; border-radius: 1rem; }
     </style>
 </head>
-<body class="min-h-screen antialiased pb-12">
+<body class="p-4 md:p-8 min-h-screen">
 
-<header class="bg-[#2a1d13] shadow-2xl sticky top-0 z-50 border-b border-[#d4a373]">
-    <div class="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
-        <h1 class="text-2xl font-black text-[#d4a373] tracking-tighter">
-            COFFEE<span class="text-white">DATA</span> PRO 2026
-        </h1>
-        <div class="flex items-center gap-3">
-            <label for="countrySelect" class="text-sm font-bold text-crema">ORSZÁG VÁLTÁS:</label>
-            <select id="countrySelect" class="bg-[#362518] border border-[#d4a373] text-white rounded-lg px-4 py-2 outline-none focus:ring-2 ring-[#d4a373]">
-                <option value="Romania">Románia</option>
-                <option value="Hungary">Magyarország</option>
-                <option value="Poland">Lengyelország</option>
-                <option value="Czechia">Csehország</option>
-            </select>
-        </div>
-    </div>
+<header class="max-w-6xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+    <h1 class="text-3xl font-black text-[#d4a373] tracking-tighter">COFFEE<span class="text-white">DATA</span> PRO</h1>
+    <select id="countrySelect" class="bg-[#2a1d13] border-2 border-[#d4a373] p-3 rounded-xl text-white outline-none focus:ring-2 ring-orange-400">
+        <option>Adatok betöltése...</option>
+    </select>
 </header>
 
-<main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+<main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
     
-    <div class="glass-card rounded-2xl p-6 lg:col-span-2">
-        <h2 class="text-xl font-bold text-[#d4a373] mb-1">📈 Fogyasztási Trendek (2019-2024)</h2>
-        <p class="text-xs text-gray-400 mb-6">Éves kávéfogyasztás alakulása kg/fő egységben mérve.</p>
-        <div class="chart-container">
-            <canvas id="trendChart"></canvas>
+    <div class="lg:col-span-2 glass p-6 shadow-2xl">
+        <h2 id="title" class="text-2xl font-bold mb-6 text-[#d4a373]">Válassz országot a listából!</h2>
+        <div style="height: 350px; position: relative;">
+            <canvas id="chart"></canvas>
         </div>
     </div>
 
-    <div class="glass-card rounded-2xl p-6">
-        <h2 class="text-xl font-bold text-[#d4a373] mb-1">🥧 Piaci Szegmentáció</h2>
-        <p class="text-xs text-gray-400 mb-6">Bevétel megoszlása: Otthoni vs. Vendéglátás.</p>
-        <div class="chart-container flex items-center justify-center">
-            <canvas id="pieChart"></canvas>
+    <div class="flex flex-col gap-4">
+        <div class="glass p-6 text-center">
+            <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Piacméret</p>
+            <p id="market" class="text-3xl font-black">-</p>
+            <p class="text-xs text-[#d4a373]">Millió EUR</p>
+        </div>
+        <div class="glass p-6 text-center text-balance">
+            <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Kedvenc Típus</p>
+            <p id="type" class="text-2xl font-bold italic">-</p>
+        </div>
+        <div class="glass p-6 text-center">
+            <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Kávézók száma</p>
+            <p id="shops" class="text-3xl font-black">-</p>
+            <p class="text-xs text-gray-400">Hivatalos egység</p>
         </div>
     </div>
-
-    <div class="glass-card rounded-2xl p-6">
-        <h2 class="text-xl font-bold text-[#d4a373] mb-1">📊 Regionális Rangsor</h2>
-        <p class="text-xs text-gray-400 mb-6">Aktuális pozíció a környező országokhoz képest.</p>
-        <div class="chart-container">
-            <canvas id="compareChart"></canvas>
-        </div>
-    </div>
-
 </main>
 
 <script>
-    // --- BŐVÍTETT ADATBÁZIS ---
-    const coffeeDatabase = {
-        Romania: {
-            trend: [3.8, 3.9, 4.1, 4.3, 4.5, 4.6],
-            marketShare: [35, 65],
-            growth: 8.5
-        },
-        Hungary: {
-            trend: [3.2, 3.1, 3.3, 3.4, 3.5, 3.6],
-            marketShare: [45, 55],
-            growth: 5.0
-        },
-        Poland: {
-            trend: [3.5, 3.6, 3.7, 3.8, 3.9, 4.0],
-            marketShare: [50, 50],
-            growth: 6.2
-        },
-        Czechia: {
-            trend: [5.0, 5.1, 5.0, 5.2, 5.4, 5.5],
-            marketShare: [30, 70],
-            growth: 4.8
-        }
-    };
+    const url = 'data/kave_adatok.csv?v=' + Date.now();
+    let myChart;
 
-    const labels2019to2024 = ['2019', '2020', '2021', '2022', '2023', '2024'];
-    const colors = { crema: '#d4a373', mocha: '#795548', espresso: '#362518', white: '#e9e4d5' };
+    Papa.parse(url, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            const data = results.data;
+            const select = document.getElementById('countrySelect');
+            select.innerHTML = '<option value="" disabled selected>Válassz országot (20+ elérhető)...</option>';
 
-    // Chart példányok tárolása a frissítéshez
-    let trendChart, pieChart, compareChart;
-
-    function initCharts(country) {
-        const data = coffeeDatabase[country];
-
-        // 1. Trend Chart (Line)
-        const ctx1 = document.getElementById('trendChart').getContext('2d');
-        trendChart = new Chart(ctx1, {
-            type: 'line',
-            data: {
-                labels: labels2019to2024,
-                datasets: [{
-                    label: `${country} - Kg/fő`,
-                    data: data.trend,
-                    borderColor: colors.crema,
-                    backgroundColor: 'rgba(212, 163, 115, 0.2)',
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 4,
-                    pointRadius: 6,
-                    pointBackgroundColor: colors.crema
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#fff' } } },
-                scales: {
-                    y: { grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } },
-                    x: { grid: { display: false }, ticks: { color: '#aaa' } }
+            data.forEach((row, i) => {
+                if(row.Orszag) {
+                    let opt = document.createElement('option');
+                    opt.value = i; opt.text = row.Orszag; select.appendChild(opt);
                 }
-            }
-        });
+            });
 
-        // 2. Pie Chart
-        const ctx2 = document.getElementById('pieChart').getContext('2d');
-        pieChart = new Chart(ctx2, {
-            type: 'doughnut',
-            data: {
-                labels: ['Otthoni', 'Kávézó/Horeca'],
-                datasets: [{
-                    data: data.marketShare,
-                    backgroundColor: [colors.mocha, colors.crema],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { color: '#fff', padding: 20 } } }
-            }
-        });
+            select.onchange = function() {
+                const d = data[this.value];
+                updateUI(d);
+            };
+        }
+    });
 
-        // 3. Comparison Chart
-        const ctx3 = document.getElementById('compareChart').getContext('2d');
-        compareChart = new Chart(ctx3, {
+    function updateUI(d) {
+        document.getElementById('title').innerText = d.Orszag + " - Fogyasztási adatok";
+        document.getElementById('market').innerText = d.Piac_Meret_Millio_EUR;
+        document.getElementById('type').innerText = d.Kedvenc_Tipus;
+        document.getElementById('shops').innerText = d.Kavezo_Szam.toLocaleString();
+
+        const ctx = document.getElementById('chart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Románia', 'Magyarország', 'Lengyelország', 'Csehország'],
+                labels: ['Egy főre eső fogyasztás (kg/év)', 'Régiós átlag'],
                 datasets: [{
-                    label: '2024 Fogyasztás (kg)',
-                    data: [4.6, 3.6, 4.0, 5.5],
-                    backgroundColor: [
-                        country === 'Romania' ? colors.crema : '#4a3528',
-                        country === 'Hungary' ? colors.crema : '#4a3528',
-                        country === 'Poland' ? colors.crema : '#4a3528',
-                        country === 'Czechia' ? colors.crema : '#4a3528'
-                    ],
+                    label: d.Orszag,
+                    data: [d.Fogyasztas_2024, 4.2],
+                    backgroundColor: ['#d4a373', '#4a3528'],
                     borderRadius: 8
                 }]
             },
-            options: {
-                responsive: true,
+            options: { 
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } },
-                    x: { ticks: { color: '#aaa' } }
-                }
+                scales: { y: { grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } } }
             }
         });
     }
-
-    // Frissítés funkció
-    function updateCharts(country) {
-        const newData = coffeeDatabase[country];
-        
-        // Trend frissítése
-        trendChart.data.datasets[0].label = `${country} - Kg/fő`;
-        trendChart.data.datasets[0].data = newData.trend;
-        trendChart.update();
-
-        // Pie frissítése
-        pieChart.data.datasets[0].data = newData.marketShare;
-        pieChart.update();
-
-        // Compare kiemelés frissítése
-        compareChart.data.datasets[0].backgroundColor = [
-            country === 'Romania' ? colors.crema : '#4a3528',
-            country === 'Hungary' ? colors.crema : '#4a3528',
-            country === 'Poland' ? colors.crema : '#4a3528',
-            country === 'Czechia' ? colors.crema : '#4a3528'
-        ];
-        compareChart.update();
-    }
-
-    // Eseménykezelő a választóhoz
-    document.getElementById('countrySelect').addEventListener('change', (e) => {
-        updateCharts(e.target.value);
-    });
-
-    // Indítás
-    window.onload = () => initCharts('Romania');
 </script>
-
 </body>
 </html>
