@@ -51,75 +51,123 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 <script>
 const csvUrl = 'data/kave_adatok.csv?nocache=' + new Date().getTime();
-let chart;
+const labels2019to2024 = ['2019','2020','2021','2022','2023','2024'];
+const colors = { crema:'#d4a373', mocha:'#795548', dark:'#4a3528' };
+
+let csvData = [];
+let trendChart, pieChart, compareChart;
 
 Papa.parse(csvUrl, {
     download: true,
     header: true,
     dynamicTyping: true,
     skipEmptyLines: true,
-    complete: function (results) {
+    complete: res => {
+        csvData = res.data;
 
-        if (!results.data.length) {
-            showError("A CSV fájl üres.");
-            return;
-        }
+        const select = document.getElementById('countrySelect');
+        select.innerHTML = '';
 
-        const data = results.data;
-
-        const select = document.getElementById("countrySelect");
-        select.innerHTML = `<option disabled selected>Válassz országot...</option>`;
-
-        data.forEach((row, index) => {
-            if (row.Orszag) {
-                const opt = document.createElement("option");
-                opt.value = index;
-                opt.textContent = row.Orszag;
-                select.appendChild(opt);
-            }
+        csvData.forEach((row, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = row.Orszag;
+            select.appendChild(opt);
         });
 
-        select.onchange = () => updateUI(data[select.value]);
-    },
-    error: () => showError("Nem sikerült betölteni a CSV fájlt.")
+        initCharts(0);
+        select.addEventListener('change', e => updateCharts(+e.target.value));
+    }
 });
 
-function showError(msg) {
-    document.getElementById("errorBox").classList.remove("hidden");
-    document.getElementById("errorText").innerText = msg;
+function buildTrend(value){
+    return [
+        value - 0.6,
+        value - 0.5,
+        value - 0.4,
+        value - 0.3,
+        value - 0.1,
+        value
+    ];
 }
 
-function updateUI(d) {
-    document.getElementById("title").innerText = d.Orszag;
-    document.getElementById("fogyasztas").innerText = d.Fogyasztas_2024 + " kg/fő";
-    document.getElementById("piac").innerText = d.Piac_Meret_Millio_EUR + " M €";
-    document.getElementById("kavezo").innerText = d.Kavezo_Szam.toLocaleString();
+function initCharts(index){
+    const d = csvData[index];
 
-    const ctx = document.getElementById("mainChart");
-    if (chart) chart.destroy();
-
-    chart = new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: ["Egy főre jutó fogyasztás"],
-            datasets: [{
-                label: d.Orszag,
-                data: [d.Fogyasztas_2024],
-                backgroundColor: "#d4a373"
+    // 1️⃣ TREND
+    trendChart = new Chart(trendChartCtx(), {
+        type:'line',
+        data:{
+            labels:labels2019to2024,
+            datasets:[{
+                label:`${d.Orszag} kg/fő`,
+                data:buildTrend(d.Fogyasztas_2024),
+                borderColor:colors.crema,
+                backgroundColor:'rgba(212,163,115,0.2)',
+                fill:true,
+                tension:0.4
             }]
         },
-        options: {
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true }
-            }
+        options:{ maintainAspectRatio:false }
+    });
+
+    // 2️⃣ PIE
+    pieChart = new Chart(pieChartCtx(), {
+        type:'doughnut',
+        data:{
+            labels:['Kávézók','Egyéb piac'],
+            datasets:[{
+                data:[d.Kavezo_Szam, d.Piac_Meret_Millio_EUR],
+                backgroundColor:[colors.crema, colors.mocha],
+                borderWidth:0
+            }]
+        },
+        options:{ maintainAspectRatio:false }
+    });
+
+    // 3️⃣ COMPARE
+    compareChart = new Chart(compareChartCtx(), {
+        type:'bar',
+        data:{
+            labels:csvData.map(r=>r.Orszag),
+            datasets:[{
+                data:csvData.map(r=>r.Fogyasztas_2024),
+                backgroundColor:csvData.map((_,i)=> i===index ? colors.crema : colors.dark),
+                borderRadius:8
+            }]
+        },
+        options:{
+            maintainAspectRatio:false,
+            plugins:{ legend:{display:false} }
         }
     });
 }
+
+function updateCharts(index){
+    const d = csvData[index];
+
+    trendChart.data.datasets[0].label = `${d.Orszag} kg/fő`;
+    trendChart.data.datasets[0].data = buildTrend(d.Fogyasztas_2024);
+    trendChart.update();
+
+    pieChart.data.datasets[0].data = [d.Kavezo_Szam, d.Piac_Meret_Millio_EUR];
+    pieChart.update();
+
+    compareChart.data.datasets[0].backgroundColor =
+        csvData.map((_,i)=> i===index ? colors.crema : colors.dark);
+    compareChart.update();
+}
+
+const trendChartCtx = () => document.getElementById('trendChart').getContext('2d');
+const pieChartCtx = () => document.getElementById('pieChart').getContext('2d');
+const compareChartCtx = () => document.getElementById('compareChart').getContext('2d');
 </script>
+
 
 </body>
 </html>
+
 
