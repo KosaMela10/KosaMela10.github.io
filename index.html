@@ -3,103 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kávépiaci Adatbázis 2026</title>
+    <title>Kávé Adatbázis - Javított CSV Betöltő</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { background-color: #120b06; color: #f3ece4; font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(43, 29, 20, 0.8); border: 1px solid #d4a373; border-radius: 1rem; }
+        body { background-color: #120b06; color: #f3ece4; font-family: sans-serif; }
+        .glass { background: rgba(43, 29, 20, 0.9); border: 2px solid #d4a373; border-radius: 1rem; }
     </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen">
+<body class="p-4 md:p-10">
 
-<header class="max-w-6xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
-    <h1 class="text-3xl font-black text-[#d4a373] tracking-tighter">COFFEE<span class="text-white">DATA</span> PRO</h1>
-    <select id="countrySelect" class="bg-[#2a1d13] border-2 border-[#d4a373] p-3 rounded-xl text-white outline-none focus:ring-2 ring-orange-400">
-        <option>Adatok betöltése...</option>
-    </select>
-</header>
-
-<main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
-    <div class="lg:col-span-2 glass p-6 shadow-2xl">
-        <h2 id="title" class="text-2xl font-bold mb-6 text-[#d4a373]">Válassz országot a listából!</h2>
-        <div style="height: 350px; position: relative;">
-            <canvas id="chart"></canvas>
-        </div>
+<div class="max-w-4xl mx-auto">
+    <div id="errorBox" class="hidden bg-red-900 border-2 border-red-500 text-white p-4 rounded-xl mb-6">
+        <h3 class="font-bold">Hiba történt az adatok betöltésekor!</h3>
+        <p id="errorText" class="text-sm"></p>
     </div>
 
-    <div class="flex flex-col gap-4">
-        <div class="glass p-6 text-center">
-            <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Piacméret</p>
-            <p id="market" class="text-3xl font-black">-</p>
-            <p class="text-xs text-[#d4a373]">Millió EUR</p>
+    <header class="flex justify-between items-center mb-8 border-b border-[#d4a373] pb-6">
+        <h1 class="text-2xl font-black text-[#d4a373]">COFFEE DATA PRO</h1>
+        <select id="countrySelect" class="bg-[#2a1d13] border border-[#d4a373] p-2 rounded text-white outline-none">
+            <option>CSV fájl keresése...</option>
+        </select>
+    </header>
+
+    <div class="glass p-8 shadow-2xl">
+        <h2 id="title" class="text-3xl font-bold mb-6 text-center text-[#d4a373]">Válassz országot a listából!</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-center">
+            <div class="bg-[#1a120b] p-4 rounded-lg">
+                <p class="text-xs text-gray-500 uppercase">Fogyasztás</p>
+                <p id="fogyasztas" class="text-2xl font-bold">-</p>
+            </div>
+            <div class="bg-[#1a120b] p-4 rounded-lg">
+                <p class="text-xs text-gray-500 uppercase">Piacméret</p>
+                <p id="piac" class="text-2xl font-bold text-green-500">-</p>
+            </div>
+            <div class="bg-[#1a120b] p-4 rounded-lg">
+                <p class="text-xs text-gray-500 uppercase">Kávézók</p>
+                <p id="kavezo" class="text-2xl font-bold">-</p>
+            </div>
         </div>
-        <div class="glass p-6 text-center text-balance">
-            <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Kedvenc Típus</p>
-            <p id="type" class="text-2xl font-bold italic">-</p>
-        </div>
-        <div class="glass p-6 text-center">
-            <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Kávézók száma</p>
-            <p id="shops" class="text-3xl font-black">-</p>
-            <p class="text-xs text-gray-400">Hivatalos egység</p>
+
+        <div style="height: 300px; position: relative;">
+            <canvas id="mainChart"></canvas>
         </div>
     </div>
-</main>
+</div>
 
 <script>
-    const url = 'data/kave_adatok.csv?v=' + Date.now();
-    let myChart;
+    // Dinamikus URL a cache (gyorsítótár) ellen
+    const csvUrl = 'data/kave_adatok.csv?nocache=' + new Date().getTime();
+    let chart;
 
-    Papa.parse(url, {
+    Papa.parse(csvUrl, {
         download: true,
         header: true,
         dynamicTyping: true,
         skipEmptyLines: true,
         complete: function(results) {
+            console.log("Beolvasott adatok:", results.data);
+            
+            if (results.data.length === 0) {
+                showError("A CSV fájl üres vagy nem tartalmaz adatokat!");
+                return;
+            }
+
             const data = results.data;
             const select = document.getElementById('countrySelect');
-            select.innerHTML = '<option value="" disabled selected>Válassz országot (20+ elérhető)...</option>';
+            select.innerHTML = '<option value="" disabled selected>Válassz országot...</option>';
 
-            data.forEach((row, i) => {
-                if(row.Orszag) {
-                    let opt = document.createElement('option');
-                    opt.value = i; opt.text = row.Orszag; select.appendChild(opt);
+            // Feltöltjük a választót a CSV-ből
+            data.forEach((row, index) => {
+                // Ellenőrizzük, hogy van-e ország név (lehet kis- vagy nagybetűs oszlopnév is)
+                const name = row.Orszag || row.orszag || row.OR_SZAG;
+                if (name) {
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.text = name;
+                    select.appendChild(opt);
                 }
             });
 
             select.onchange = function() {
-                const d = data[this.value];
-                updateUI(d);
+                updateUI(data[this.value]);
             };
+        },
+        error: function(err) {
+            showError("Nem sikerült elérni a 'data/kave_adatok.csv' fájlt. Ellenőrizd a mappa nevét a GitHubon!");
         }
     });
 
-    function updateUI(d) {
-        document.getElementById('title').innerText = d.Orszag + " - Fogyasztási adatok";
-        document.getElementById('market').innerText = d.Piac_Meret_Millio_EUR;
-        document.getElementById('type').innerText = d.Kedvenc_Tipus;
-        document.getElementById('shops').innerText = d.Kavezo_Szam.toLocaleString();
+    function showError(msg) {
+        document.getElementById('errorBox').classList.remove('hidden');
+        document.getElementById('errorText').innerText = msg;
+    }
 
-        const ctx = document.getElementById('chart').getContext('2d');
-        if(myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
+    function updateUI(d) {
+        // Kezeljük a lehetséges elnevezési különbségeket a CSV-ben
+        const name = d.Orszag || d.orszag;
+        const cons = d.Fogyasztas_2024 || d.fogyasztas || 0;
+        const market = d.Piac_Meret_Millio_EUR || d.piac || 0;
+        const shops = d.Kavezo_Szam || d.kavezok || 0;
+
+        document.getElementById('title').innerText = name;
+        document.getElementById('fogyasztas').innerText = cons + " kg/fő";
+        document.getElementById('piac').innerText = market + " M €";
+        document.getElementById('kavezo').innerText = shops.toLocaleString();
+
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Egy főre eső fogyasztás (kg/év)', 'Régiós átlag'],
+                labels: ['Egyéni fogyasztás'],
                 datasets: [{
-                    label: d.Orszag,
-                    data: [d.Fogyasztas_2024, 4.2],
-                    backgroundColor: ['#d4a373', '#4a3528'],
-                    borderRadius: 8
+                    label: name,
+                    data: [cons],
+                    backgroundColor: '#d4a373'
                 }]
             },
-            options: { 
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } } }
-            }
+            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 15 } } }
         });
     }
 </script>
