@@ -10,12 +10,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #1a120b; color: #e9e4d5; background-image: radial-gradient(circle at 10% 20%, #2c1e14 1px, transparent 0.5px); background-size: 20px 20px; }
-        .glass-card { background: rgba(74, 53, 40, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(212, 163, 115, 0.2); transition: transform 0.2s ease; }
+        .glass-card { background: rgba(74, 53, 40, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(212, 163, 115, 0.2); transition: all 0.3s ease; }
         .glass-card:hover { transform: translateY(-5px); }
         .chart-container { position: relative; height: 320px; width: 100%; }
+        .compare-btn { background: linear-gradient(135deg, #d4a373 0%, #a1887f 100%); transition: all 0.3s ease; }
+        .compare-btn:hover { filter: brightness(1.2); transform: scale(1.05); }
     </style>
 </head>
-<body class="min-h-screen antialiased pb-12">
+<body class="min-h-screen antialiased pb-20">
 
 <header class="bg-[#2a1d13] shadow-2xl sticky top-0 z-50 border-b border-[#d4a373]">
     <div class="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -32,22 +34,34 @@
 <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
     <div class="glass-card rounded-2xl p-6 lg:col-span-2">
         <h2 class="text-xl font-bold text-[#d4a373] mb-1 italic">📈 Fogyasztási Trendek (Becsült 2019-2024)</h2>
-        <p class="text-xs text-gray-400 mb-6 font-mono">Forrás: data/kave_adatok.csv</p>
         <div class="chart-container"><canvas id="trendChart"></canvas></div>
     </div>
 
     <div class="glass-card rounded-2xl p-6 text-center">
         <h2 class="text-xl font-bold text-[#d4a373] mb-1">🥧 Piac vs. Kávézók Aránya</h2>
-        <p class="text-xs text-gray-400 mb-6 italic">Bevétel és egységek megoszlása</p>
         <div class="chart-container flex items-center justify-center"><canvas id="pieChart"></canvas></div>
     </div>
 
     <div class="glass-card rounded-2xl p-6">
-        <h2 class="text-xl font-bold text-[#d4a373] mb-1">📊 Regionális Összehasonlítás</h2>
-        <p class="text-xs text-gray-400 mb-6 italic text-balance">Helyezés a teljes európai listában (kg/fő)</p>
+        <h2 class="text-xl font-bold text-[#d4a373] mb-1 text-center">📊 Regionális Összehasonlítás</h2>
         <div class="chart-container"><canvas id="compareChart"></canvas></div>
     </div>
 </main>
+
+<div class="max-w-6xl mx-auto px-6 mt-10">
+    <div class="flex justify-center mb-8">
+        <button onclick="toggleGlobalCompare()" class="compare-btn text-[#1a120b] font-black px-8 py-4 rounded-full shadow-xl uppercase tracking-widest text-sm">
+            🚀 Teljes Európai Összehasonlítás Megnyitása
+        </button>
+    </div>
+
+    <div id="globalCompareSection" class="hidden glass-card rounded-3xl p-8 mb-12">
+        <h2 class="text-2xl font-black text-[#d4a373] mb-6 text-center uppercase tracking-tighter">Minden Ország Egymás Mellett (kg/fő)</h2>
+        <div style="height: 500px; position: relative;">
+            <canvas id="globalChart"></canvas>
+        </div>
+    </div>
+</div>
 
 <script>
     const csvUrl = 'data/kave_adatok.csv?v=' + Date.now();
@@ -55,18 +69,15 @@
     const years = ['2019', '2020', '2021', '2022', '2023', '2024'];
     
     let csvData = [];
-    let trendChart, pieChart, compareChart;
+    let trendChart, pieChart, compareChart, globalChart;
 
-    // CSV Betöltése
     Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
+        download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
         complete: function(results) {
             csvData = results.data.filter(d => d.Orszag);
             populateSelector();
-            initCharts(0); // Első ország betöltése
+            initCharts(0);
+            initGlobalChart(); // Előkészítjük a nagy diagramot
         }
     });
 
@@ -75,77 +86,69 @@
         select.innerHTML = '';
         csvData.forEach((row, i) => {
             const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = row.Orszag;
+            opt.value = i; opt.textContent = row.Orszag;
             select.appendChild(opt);
         });
         select.addEventListener('change', e => updateDashboard(+e.target.value));
     }
 
-    // Kamu trend generálása a 2024-es adatból
-    function buildTrend(val) {
-        return [val-0.5, val-0.4, val-0.2, val-0.3, val-0.1, val];
-    }
+    function buildTrend(val) { return [val-0.5, val-0.4, val-0.2, val-0.3, val-0.1, val]; }
 
     function initCharts(index) {
         const d = csvData[index];
-        const ctxT = document.getElementById('trendChart').getContext('2d');
-        const ctxP = document.getElementById('pieChart').getContext('2d');
-        const ctxC = document.getElementById('compareChart').getContext('2d');
-
-        // 1. TREND LINE
-        trendChart = new Chart(ctxT, {
+        trendChart = new Chart(document.getElementById('trendChart'), {
             type: 'line',
-            data: {
-                labels: years,
-                datasets: [{
-                    label: `${d.Orszag} (kg/fő)`,
-                    data: buildTrend(d.Fogyasztas_2024),
-                    borderColor: colors.crema,
-                    backgroundColor: 'rgba(212, 163, 115, 0.2)',
-                    fill: true, tension: 0.4, borderWidth: 4, pointRadius: 5
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#fff' } } },
-                scales: { y: { grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } }, x: { ticks: { color: '#aaa' } } }
-            }
+            data: { labels: years, datasets: [{ label: `${d.Orszag} (kg/fő)`, data: buildTrend(d.Fogyasztas_2024), borderColor: colors.crema, backgroundColor: 'rgba(212,163,115,0.2)', fill: true, tension: 0.4, borderWidth: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#fff' } } }, scales: { y: { grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } }, x: { ticks: { color: '#aaa' } } } }
         });
 
-        // 2. PIE
-        pieChart = new Chart(ctxP, {
+        pieChart = new Chart(document.getElementById('pieChart'), {
             type: 'doughnut',
-            data: {
-                labels: ['Piac (M€)', 'Kávézók száma'],
-                datasets: [{
-                    data: [d.Piac_Meret_Millio_EUR, d.Kavezo_Szam],
-                    backgroundColor: [colors.mocha, colors.crema],
-                    borderWidth: 0
-                }]
-            },
+            data: { labels: ['Piac (M€)', 'Kávézók'], datasets: [{ data: [d.Piac_Meret_Millio_EUR, d.Kavezo_Szam], backgroundColor: [colors.mocha, colors.crema], borderWidth: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
         });
 
-        // 3. COMPARE BAR
-        compareChart = new Chart(ctxC, {
+        compareChart = new Chart(document.getElementById('compareChart'), {
+            type: 'bar',
+            data: { labels: csvData.map(r => r.Orszag), datasets: [{ data: csvData.map(r => r.Fogyasztas_2024), backgroundColor: csvData.map((_, i) => i === index ? colors.crema : colors.dark), borderRadius: 5 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } }, x: { display: false } } }
+        });
+    }
+
+    function initGlobalChart() {
+        globalChart = new Chart(document.getElementById('globalChart'), {
             type: 'bar',
             data: {
                 labels: csvData.map(r => r.Orszag),
                 datasets: [{
-                    label: 'Fogyasztás 2024',
+                    label: 'Fogyasztás (kg/fő)',
                     data: csvData.map(r => r.Fogyasztas_2024),
-                    backgroundColor: csvData.map((_, i) => i === index ? colors.crema : colors.dark),
-                    borderRadius: 5
+                    backgroundColor: colors.crema,
+                    borderRadius: 10
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, grid: { color: '#2c1e14' }, ticks: { color: '#aaa' } }, x: { display: false } }
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    x: { grid: { color: '#2c1e14' }, ticks: { color: '#fff' } },
+                    y: { ticks: { color: '#d4a373', font: { weight: 'bold' } } }
+                }
             }
         });
     }
 
+    function toggleGlobalCompare() {
+        const sec = document.getElementById('globalCompareSection');
+        sec.classList.toggle('hidden');
+        if (!sec.classList.contains('hidden')) {
+            window.scrollTo({ top: sec.offsetTop - 100, behavior: 'smooth' });
+        }
+    }
+
     function updateDashboard(index) {
         const d = csvData[index];
-
         trendChart.data.datasets[0].label = `${d.Orszag} (kg/fő)`;
         trendChart.data.datasets[0].data = buildTrend(d.Fogyasztas_2024);
         trendChart.update();
