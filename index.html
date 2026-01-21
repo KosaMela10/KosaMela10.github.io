@@ -208,10 +208,13 @@
                 options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
             }));
 
-            
+            charts.push(new Chart(document.getElementById('chart3'), {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Kávézók', data: csvData.map(x => x.Kavezo_Szam), backgroundColor: gold }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            }));
         }
     }
 </script>
 </body>
 </html>
-
