@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
-            --gold-light: #e6be8a; 
             --gold-main: #d4a373; 
             --bg-dark: #121212; 
             --card-bg: #1e1e1e;
@@ -28,26 +27,23 @@
             border: 1px solid #333; 
             border-radius: 1.5rem;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
         }
-        .chart-container { position: relative; height: 280px; width: 100%; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
         
-        /* LENYÍLÓ LISTA STÍLUSA */
         #countrySelect {
-            background-color: transparent;
-            border: none;
+            background-color: #2a1d13;
             color: var(--gold-main);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 5px 15px;
             font-weight: bold;
             outline: none;
             cursor: pointer;
-            padding-right: 25px;
         }
         
-        /* Lista elemek olvashatósága */
         #countrySelect option {
             background-color: #2a1d13;
             color: white;
-            font-family: 'Inter', sans-serif;
         }
 
         .compare-btn { 
@@ -59,7 +55,6 @@
             box-shadow: 0 4px 15px rgba(194, 149, 106, 0.4);
             transition: all 0.3s ease;
         }
-        .compare-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
     </style>
 </head>
 <body class="min-h-screen pb-10">
@@ -67,41 +62,37 @@
 <header class="header-line bg-[#121212]/90 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-2">
-            <span class="text-2xl text-orange-200">☕</span>
+            <span class="text-2xl">☕</span>
             <h1 class="text-2xl font-black tracking-tighter uppercase italic text-white">Coffee<span class="text-[#d4a373]">Metrics</span></h1>
         </div>
         <div class="bg-zinc-800/50 border border-zinc-700 rounded-full px-4 py-2 flex items-center gap-2">
-            <span class="text-[10px] text-zinc-500 font-bold uppercase">Helyszín:</span>
+            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Helyszín:</span>
             <select id="countrySelect"></select>
         </div>
     </div>
 </header>
 
 <main class="max-w-7xl mx-auto p-6 mt-8">
-    <div class="mb-12 text-center md:text-left">
+    <div class="mb-12">
         <h2 id="viewTitle" class="text-5xl font-black mb-2 text-white italic underline decoration-[#d4a373]">Piaci Elemzés</h2>
-        <div class="flex items-center justify-center md:justify-start gap-4">
+        <div class="flex items-center gap-4">
             <div class="h-1 w-12 bg-[#d4a373]"></div>
             <p id="viewSub" class="text-zinc-400 font-medium tracking-wide italic">Kiemelt adatok, országos elemzés</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="glass-card p-8">
+        <div class="glass-card p-8 md:col-span-2">
             <h3 class="text-xl font-bold uppercase tracking-wide text-[#d4a373] mb-4 text-center">Trend Line (2019-2024)</h3>
             <div class="chart-container"><canvas id="chart1"></canvas></div>
         </div>
-        <div class="glass-card p-8 text-center">
+        <div class="glass-card p-8">
             <h3 class="text-xl font-bold uppercase tracking-wide text-[#d4a373] mb-4 text-center">Piaci Érték (M€)</h3>
-            <div class="chart-container"><canvas id="chart2"></canvas></div>
+            <div class="chart-container flex items-center justify-center"><canvas id="chart2"></canvas></div>
         </div>
         <div class="glass-card p-8">
             <h3 class="text-xl font-bold uppercase tracking-wide text-[#d4a373] mb-4 text-center">Kávézók Száma</h3>
             <div class="chart-container"><canvas id="chart3"></canvas></div>
-        </div>
-        <div class="glass-card p-8">
-            <h3 class="text-xl font-bold uppercase tracking-wide text-[#d4a373] mb-4 text-center text-balance">Regionális Pozíció</h3>
-            <div class="chart-container"><canvas id="chart4"></canvas></div>
         </div>
     </div>
 
@@ -139,17 +130,15 @@
 
     function toggleView() {
         isCompare = !isCompare;
-        const btn = document.getElementById('toggleBtn');
-        // KIJAVÍTOTT ÁTVÁLTÓ SZÖVEGEK
-        btn.innerText = isCompare ? "Vissza az egyéni nézethez" : "Összes ország összehasonlítása";
+        document.getElementById('toggleBtn').innerText = isCompare ? "Vissza az egyéni nézethez" : "Összes ország összehasonlítása";
         render();
     }
 
     function render() {
         charts.forEach(c => c.destroy());
         charts = [];
-        const currentIdx = parseInt(document.getElementById('countrySelect').value) || 0;
-        const d = csvData[currentIdx];
+        const idx = parseInt(document.getElementById('countrySelect').value) || 0;
+        const d = csvData[idx];
 
         if (!isCompare) {
             document.getElementById('viewTitle').innerText = d.Orszag;
@@ -157,14 +146,7 @@
             // 1. Line - Fogyasztás Trend
             charts.push(new Chart(document.getElementById('chart1'), {
                 type: 'line',
-                data: { 
-                    labels: ['2019', '2020', '2021', '2022', '2023', '2024'], 
-                    datasets: [{ 
-                        label: 'kg/fő', 
-                        data: [d.Fogyasztas_2024-0.7, d.Fogyasztas_2024-0.4, d.Fogyasztas_2024-0.5, d.Fogyasztas_2024-0.2, d.Fogyasztas_2024-0.1, d.Fogyasztas_2024], 
-                        borderColor: gold, tension: 0.4, fill: true, backgroundColor: 'rgba(212, 163, 115, 0.1)' 
-                    }] 
-                },
+                data: { labels: ['2019', '2020', '2021', '2022', '2023', '2024'], datasets: [{ label: 'kg/fő', data: [d.Fogyasztas_2024-0.6, d.Fogyasztas_2024-0.4, d.Fogyasztas_2024-0.5, d.Fogyasztas_2024-0.2, d.Fogyasztas_2024-0.1, d.Fogyasztas_2024], borderColor: gold, tension: 0.4, fill: true, backgroundColor: 'rgba(212, 163, 115, 0.1)' }] },
                 options: { responsive: true, maintainAspectRatio: false }
             }));
 
@@ -178,27 +160,8 @@
             // 3. Bar - Kávézók
             charts.push(new Chart(document.getElementById('chart3'), {
                 type: 'bar',
-                data: { labels: [d.Orszag], datasets: [{ label: 'Egységek', data: [d.Kavezo_Szam], backgroundColor: gold, borderRadius: 10 }] },
+                data: { labels: [d.Orszag], datasets: [{ label: 'Egységek száma', data: [d.Kavezo_Szam], backgroundColor: gold, borderRadius: 10 }] },
                 options: { responsive: true, maintainAspectRatio: false }
-            }));
-
-            // 4. Regionális kiemelés
-            charts.push(new Chart(document.getElementById('chart4'), {
-                type: 'bar',
-                data: { 
-                    labels: csvData.map(x => x.Orszag), 
-                    datasets: [{ 
-                        data: csvData.map(x => x.Fogyasztas_2024), 
-                        backgroundColor: csvData.map((_, i) => i === currentIdx ? gold : '#333'),
-                        borderRadius: 4
-                    }] 
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } }, 
-                    scales: { x: { display: false } } 
-                }
             }));
 
         } else {
