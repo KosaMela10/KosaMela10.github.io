@@ -3,171 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kávé Adatbázis - Javított CSV Betöltő</title>
+    <title>Kávépiaci Dashboard - 3 Diagram</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         body { background-color: #120b06; color: #f3ece4; font-family: sans-serif; }
-        .glass { background: rgba(43, 29, 20, 0.9); border: 2px solid #d4a373; border-radius: 1rem; }
+        .glass { background: rgba(43, 29, 20, 0.9); border: 1px solid #d4a373; border-radius: 1rem; }
+        .chart-box { height: 250px; position: relative; }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="p-4 md:p-8">
 
-<div class="max-w-4xl mx-auto">
-    <div id="errorBox" class="hidden bg-red-900 border-2 border-red-500 text-white p-4 rounded-xl mb-6">
-        <h3 class="font-bold">Hiba történt az adatok betöltésekor!</h3>
-        <p id="errorText" class="text-sm"></p>
-    </div>
+<header class="max-w-6xl mx-auto mb-8 flex justify-between items-center border-b border-[#d4a373] pb-4">
+    <h1 class="text-2xl font-black text-[#d4a373]">COFFEE ANALYTICS</h1>
+    <select id="countrySelect" class="bg-[#2a1d13] border border-[#d4a373] p-2 rounded text-white outline-none">
+        <option>Adatok betöltése...</option>
+    </select>
+</header>
 
-    <header class="flex justify-between items-center mb-8 border-b border-[#d4a373] pb-6">
-        <h1 class="text-2xl font-black text-[#d4a373]">COFFEE DATA PRO</h1>
-        <select id="countrySelect" class="bg-[#2a1d13] border border-[#d4a373] p-2 rounded text-white outline-none">
-            <option>CSV fájl keresése...</option>
-        </select>
-    </header>
+<main class="max-w-6xl mx-auto">
+    <h2 id="countryTitle" class="text-3xl font-bold mb-6 text-center text-white">Válassz országot a CSV-ből!</h2>
 
-    <div class="glass p-8 shadow-2xl">
-        <h2 id="title" class="text-3xl font-bold mb-6 text-center text-[#d4a373]">Válassz országot a listából!</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-center">
-            <div class="bg-[#1a120b] p-4 rounded-lg">
-                <p class="text-xs text-gray-500 uppercase">Fogyasztás</p>
-                <p id="fogyasztas" class="text-2xl font-bold">-</p>
-            </div>
-            <div class="bg-[#1a120b] p-4 rounded-lg">
-                <p class="text-xs text-gray-500 uppercase">Piacméret</p>
-                <p id="piac" class="text-2xl font-bold text-green-500">-</p>
-            </div>
-            <div class="bg-[#1a120b] p-4 rounded-lg">
-                <p class="text-xs text-gray-500 uppercase">Kávézók</p>
-                <p id="kavezo" class="text-2xl font-bold">-</p>
-            </div>
+        <div class="glass p-5 shadow-xl text-center">
+            <h3 class="text-[#d4a373] font-bold mb-4 uppercase text-sm">Fogyasztás (kg/fő)</h3>
+            <div class="chart-box"><canvas id="chart1"></canvas></div>
+            <p id="val1" class="mt-4 text-2xl font-black">-</p>
         </div>
 
-        <div style="height: 300px; position: relative;">
-            <canvas id="mainChart"></canvas>
+        <div class="glass p-5 shadow-xl text-center">
+            <h3 class="text-[#d4a373] font-bold mb-4 uppercase text-sm">Piacméret (Millió EUR)</h3>
+            <div class="chart-box"><canvas id="chart2"></canvas></div>
+            <p id="val2" class="mt-4 text-2xl font-black text-green-500">-</p>
         </div>
+
+        <div class="glass p-5 shadow-xl text-center">
+            <h3 class="text-[#d4a373] font-bold mb-4 uppercase text-sm">Kávézók száma</h3>
+            <div class="chart-box"><canvas id="chart3"></canvas></div>
+            <p id="val3" class="mt-4 text-2xl font-black">-</p>
+        </div>
+
     </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <div class="mt-8 glass p-4 text-center">
+        <p class="text-gray-400 text-sm">Legnépszerűbb kávétípus az országban:</p>
+        <span id="favType" class="text-xl font-bold italic text-[#d4a373]">-</span>
+    </div>
+</main>
+
 <script>
-const csvUrl = 'data/kave_adatok.csv?nocache=' + new Date().getTime();
-const labels2019to2024 = ['2019','2020','2021','2022','2023','2024'];
-const colors = { crema:'#d4a373', mocha:'#795548', dark:'#4a3528' };
+    const csvUrl = 'data/kave_adatok.csv?v=' + Date.now();
+    let charts = {};
 
-let csvData = [];
-let trendChart, pieChart, compareChart;
+    Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            const data = results.data;
+            const select = document.getElementById('countrySelect');
+            select.innerHTML = '<option value="" disabled selected>Válassz egyet (20+ ország)...</option>';
 
-Papa.parse(csvUrl, {
-    download: true,
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-    complete: res => {
-        csvData = res.data;
+            data.forEach((row, i) => {
+                if(row.Orszag) {
+                    let opt = document.createElement('option');
+                    opt.value = i; opt.text = row.Orszag; select.appendChild(opt);
+                }
+            });
 
-        const select = document.getElementById('countrySelect');
-        select.innerHTML = '';
-
-        csvData.forEach((row, i) => {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = row.Orszag;
-            select.appendChild(opt);
-        });
-
-        initCharts(0);
-        select.addEventListener('change', e => updateCharts(+e.target.value));
-    }
-});
-
-function buildTrend(value){
-    return [
-        value - 0.6,
-        value - 0.5,
-        value - 0.4,
-        value - 0.3,
-        value - 0.1,
-        value
-    ];
-}
-
-function initCharts(index){
-    const d = csvData[index];
-
-    // 1️⃣ TREND
-    trendChart = new Chart(trendChartCtx(), {
-        type:'line',
-        data:{
-            labels:labels2019to2024,
-            datasets:[{
-                label:`${d.Orszag} kg/fő`,
-                data:buildTrend(d.Fogyasztas_2024),
-                borderColor:colors.crema,
-                backgroundColor:'rgba(212,163,115,0.2)',
-                fill:true,
-                tension:0.4
-            }]
-        },
-        options:{ maintainAspectRatio:false }
-    });
-
-    // 2️⃣ PIE
-    pieChart = new Chart(pieChartCtx(), {
-        type:'doughnut',
-        data:{
-            labels:['Kávézók','Egyéb piac'],
-            datasets:[{
-                data:[d.Kavezo_Szam, d.Piac_Meret_Millio_EUR],
-                backgroundColor:[colors.crema, colors.mocha],
-                borderWidth:0
-            }]
-        },
-        options:{ maintainAspectRatio:false }
-    });
-
-    // 3️⃣ COMPARE
-    compareChart = new Chart(compareChartCtx(), {
-        type:'bar',
-        data:{
-            labels:csvData.map(r=>r.Orszag),
-            datasets:[{
-                data:csvData.map(r=>r.Fogyasztas_2024),
-                backgroundColor:csvData.map((_,i)=> i===index ? colors.crema : colors.dark),
-                borderRadius:8
-            }]
-        },
-        options:{
-            maintainAspectRatio:false,
-            plugins:{ legend:{display:false} }
+            select.onchange = function() {
+                updateDashboard(data[this.value]);
+            };
         }
     });
-}
 
-function updateCharts(index){
-    const d = csvData[index];
+    function createChart(id, label, value, color, max) {
+        const ctx = document.getElementById(id).getContext('2d');
+        if (charts[id]) charts[id].destroy();
+        
+        charts[id] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [label],
+                datasets: [{
+                    data: [value],
+                    backgroundColor: color,
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { beginAtZero: true, max: max, ticks: { color: '#888' }, grid: { color: '#2c1e14' } },
+                    x: { grid: { display: false }, ticks: { color: '#fff' } }
+                }
+            }
+        });
+    }
 
-    trendChart.data.datasets[0].label = `${d.Orszag} kg/fő`;
-    trendChart.data.datasets[0].data = buildTrend(d.Fogyasztas_2024);
-    trendChart.update();
+    function updateDashboard(d) {
+        document.getElementById('countryTitle').innerText = d.Orszag;
+        document.getElementById('favType').innerText = d.Kedvenc_Tipus;
+        
+        // Számértékek frissítése
+        document.getElementById('val1').innerText = d.Fogyasztas_2024 + " kg";
+        document.getElementById('val2').innerText = d.Piac_Meret_Millio_EUR + " M€";
+        document.getElementById('val3').innerText = d.Kavezo_Szam.toLocaleString();
 
-    pieChart.data.datasets[0].data = [d.Kavezo_Szam, d.Piac_Meret_Millio_EUR];
-    pieChart.update();
-
-    compareChart.data.datasets[0].backgroundColor =
-        csvData.map((_,i)=> i===index ? colors.crema : colors.dark);
-    compareChart.update();
-}
-
-const trendChartCtx = () => document.getElementById('trendChart').getContext('2d');
-const pieChartCtx = () => document.getElementById('pieChart').getContext('2d');
-const compareChartCtx = () => document.getElementById('compareChart').getContext('2d');
+        // 3 Különböző diagram kirajzolása
+        createChart('chart1', 'Kg/fő', d.Fogyasztas_2024, '#d4a373', 15);
+        createChart('chart2', 'Millió EUR', d.Piac_Meret_Millio_EUR, '#4ade80', 5000);
+        createChart('chart3', 'Egység', d.Kavezo_Szam, '#8d6e63', 160000);
+    }
 </script>
-
-
 </body>
 </html>
-
-
