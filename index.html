@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoffeeMetrics | Adatvezérelt Dashboard 2026</title>
+    <title>CoffeeMetrics | Adatvezérelt Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
+            --gold-light: #e6be8a; 
             --gold-main: #d4a373; 
             --bg-dark: #121212; 
             --card-bg: #1e1e1e;
-            --dropdown-bg: #2a1d13;
         }
         body { 
             font-family: 'Inter', sans-serif; 
@@ -22,6 +22,7 @@
             background-image: radial-gradient(#262626 1px, transparent 1px);
             background-size: 30px 30px;
         }
+        .header-line { border-bottom: 1px solid rgba(212, 163, 115, 0.3); }
         .glass-card { 
             background: var(--card-bg); 
             border: 1px solid #333; 
@@ -29,209 +30,196 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             transition: all 0.3s ease;
         }
-        .chart-container { position: relative; height: 300px; width: 100%; }
-
-        #countrySelect {
-            background-color: var(--dropdown-bg);
-            color: var(--gold-main);
-            border: 1px solid var(--gold-main);
-            padding: 8px 35px 8px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            outline: none;
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4a373'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 1rem;
+        .glass-card:hover { border-color: var(--gold-main); transform: translateY(-5px); }
+        .chart-container { position: relative; height: 280px; width: 100%; }
+        .badge { 
+            background: rgba(212, 163, 115, 0.15); 
+            color: var(--gold-light); 
+            font-size: 10px; 
+            font-weight: 800; 
+            padding: 2px 8px; 
+            border-radius: 4px;
+            border: 1px solid rgba(212, 163, 115, 0.3);
         }
-
-        #countrySelect option {
-            background-color: var(--dropdown-bg);
-            color: #ffffff;
-            padding: 10px;
-        }
-
         .compare-btn { 
             background: linear-gradient(to right, #c2956a, #8e6d4d);
             color: #121212;
             font-weight: 800;
-            padding: 14px 35px;
+            padding: 12px 30px;
             border-radius: 9999px;
             box-shadow: 0 4px 15px rgba(194, 149, 106, 0.4);
             transition: all 0.3s ease;
         }
         .compare-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+        select {
+            background-color: transparent;
+            border: none;
+            color: var(--gold-main);
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen pb-10">
 
-<header class="border-b border-zinc-800 bg-black/60 backdrop-blur-md sticky top-0 z-50">
+<header class="header-line bg-[#121212]/90 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-2">
-            <span class="text-2xl">☕</span>
-            <h1 class="text-2xl font-black uppercase italic tracking-tighter">Coffee<span class="text-[#d4a373]">Metrics</span></h1>
+            <span class="text-2xl text-orange-200">☕</span>
+            <h1 class="text-2xl font-black tracking-tighter uppercase italic">Coffee<span class="text-[#d4a373]">Metrics</span></h1>
+            <div class="h-6 w-[1px] bg-zinc-700 mx-4 hidden md:block"></div>
+            <span class="text-zinc-500 text-sm hidden md:block uppercase tracking-widest font-light">Adatvezérelt Dashboard</span>
         </div>
-        <div class="flex items-center gap-3">
-            <label for="countrySelect" class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest hidden md:block">Ország választás:</label>
-            <select id="countrySelect">
-                <option>Betöltés...</option>
-            </select>
+        <div class="bg-zinc-800/50 border border-zinc-700 rounded-full px-4 py-2 flex items-center gap-2">
+            <span class="text-[10px] text-zinc-500 font-bold uppercase">Helyszín:</span>
+            <select id="countrySelect"></select>
         </div>
     </div>
 </header>
 
 <main class="max-w-7xl mx-auto p-6 mt-8">
-    <div class="mb-12 text-center md:text-left">
-        <h2 id="viewTitle" class="text-5xl font-black mb-2 italic tracking-tight">Adatvizualizáció</h2>
-        <div class="flex items-center justify-center md:justify-start gap-4">
+    <div class="mb-12">
+        <h2 id="viewTitle" class="text-5xl font-black mb-2">Piaci Élemályzá</h2>
+        <div class="flex items-center gap-4">
             <div class="h-1 w-12 bg-[#d4a373]"></div>
-            <p id="viewSub" class="text-zinc-400 font-medium italic">Interaktív kávépiaci elemzések</p>
+            <p id="viewSub" class="text-zinc-400 font-medium tracking-wide italic">Kiemelt adatok, országos-wislan</p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="glass-card p-8 lg:col-span-2">
-            <h3 class="text-lg font-bold uppercase tracking-widest text-[#d4a373] mb-6 flex items-center gap-2">
-                <span>📈</span> Fogyasztási Ív (2019-2024)
-            </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="glass-card p-8">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-xl font-bold uppercase tracking-wide">Trend Line Elemzés</h3>
+                    <p class="text-xs text-zinc-500 italic">Éves kg/fő változás (2019-2024)</p>
+                </div>
+                <span class="badge uppercase">Dynamic Data</span>
+            </div>
             <div class="chart-container"><canvas id="chart1"></canvas></div>
         </div>
 
         <div class="glass-card p-8">
-            <h3 class="text-lg font-bold uppercase tracking-widest text-[#d4a373] mb-6 flex items-center gap-2">
-                <span>💶</span> Piaci Érték (Millió EUR)
-            </h3>
-            <div class="chart-container"><canvas id="chart2"></canvas></div>
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-xl font-bold uppercase tracking-wide">Piaci Érték</h3>
+                    <p class="text-xs text-zinc-500 italic">Piacmérze (M€)</p>
+                </div>
+                <p class="text-[10px] text-zinc-600 font-mono">Piacmérze (M€)</p>
+            </div>
+            <div class="chart-container flex items-center justify-center"><canvas id="chart2"></canvas></div>
         </div>
 
         <div class="glass-card p-8">
-            <h3 class="text-lg font-bold uppercase tracking-widest text-[#d4a373] mb-6 flex items-center gap-2">
-                <span>🏠</span> Regisztrált Kávézók
-            </h3>
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-xl font-bold uppercase tracking-wide">Kávézók és Infrastruktúra</h3>
+                    <p class="text-xs text-zinc-500 italic">Regisztrált egységek száma</p>
+                </div>
+                <span class="badge uppercase">Dynamic Data</span>
+            </div>
             <div class="chart-container"><canvas id="chart3"></canvas></div>
+        </div>
+
+        <div class="glass-card p-8">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-xl font-bold uppercase tracking-wide">Regionális Pozíció</h3>
+                    <p class="text-xs text-zinc-500 italic">Helyezés az EU rangsorban</p>
+                </div>
+                <span class="badge uppercase">Dynamic Data</span>
+            </div>
+            <div class="chart-container"><canvas id="chart4"></canvas></div>
         </div>
     </div>
 
     <div class="flex justify-center mt-16">
-        <button id="toggleBtn" onclick="toggleView()" class="compare-btn uppercase tracking-widest text-sm">
-            🚀 Teljes Európai Összehasonlítás
+        <button id="toggleBtn" onclick="toggleView()" class="compare-btn uppercase tracking-tighter">
+            Ősses ozrnági őzzemáhellyezé
         </button>
     </div>
 </main>
 
 <script>
     const csvUrl = 'data/kave_adatok.csv?v=' + Date.now();
+    const gold_primary = '#d4a373';
+    const gold_light = '#e6be8a';
+    const gold_dark = '#8e6d4d';
+
     let csvData = [];
     let charts = [];
     let isCompare = false;
 
     Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-            csvData = results.data.filter(d => d.Orszag);
+        download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
+        complete: function(res) {
+            csvData = res.data.filter(d => d.Orszag);
             populateSelector();
             render();
         }
     });
 
     function populateSelector() {
-        const select = document.getElementById('countrySelect');
-        select.innerHTML = '';
-        csvData.forEach((row, i) => {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = row.Orszag;
-            select.appendChild(opt);
+        const s = document.getElementById('countrySelect');
+        csvData.forEach((d, i) => {
+            const o = document.createElement('option');
+            o.value = i; o.textContent = d.Orszag; s.appendChild(o);
         });
-        select.onchange = render;
+        s.onchange = render;
     }
 
     function toggleView() {
         isCompare = !isCompare;
-        document.getElementById('toggleBtn').innerText = isCompare ? "⬅️ Vissza az egyéni profilhoz" : "🚀 Teljes Európai Összehasonlítás";
+        document.getElementById('toggleBtn').innerText = isCompare ? "Vissza az egyéni nézethez" : "Ősses ozrnági őzzemáhellyezé";
         render();
     }
 
-    function destroyCharts() {
+    function render() {
         charts.forEach(c => c.destroy());
         charts = [];
-    }
-
-    function render() {
-        destroyCharts();
         const idx = document.getElementById('countrySelect').value || 0;
         const d = csvData[idx];
-        const gold = '#d4a373';
 
         if (!isCompare) {
-            document.getElementById('viewTitle').innerText = d.Orszag;
-            document.getElementById('viewSub').innerText = "Kiemelt kávétípus: " + d.Kedvenc_Tipus;
-
-            // 1. Trendvonal
+            // EGYÉNI NÉZET
+            // 1. Line
             charts.push(new Chart(document.getElementById('chart1'), {
                 type: 'line',
-                data: {
-                    labels: ['2019', '2020', '2021', '2022', '2023', '2024'],
-                    datasets: [{
-                        label: 'kg/fő',
-                        data: [d.Fogyasztas_2024-0.6, d.Fogyasztas_2024-0.4, d.Fogyasztas_2024-0.5, d.Fogyasztas_2024-0.2, d.Fogyasztas_2024-0.1, d.Fogyasztas_2024],
-                        borderColor: gold,
-                        borderWidth: 4,
-                        tension: 0.4,
-                        fill: true,
-                        backgroundColor: 'rgba(212, 163, 115, 0.1)',
-                        pointRadius: 6,
-                        pointBackgroundColor: gold
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#333' }, ticks: { color: '#888' } }, x: { grid: { display: false }, ticks: { color: '#888' } } } }
+                data: { labels: ['2019', '2020', '2021', '2022', '2023', '2024'], datasets: [{ data: [d.Fogyasztas_2024-0.8, d.Fogyasztas_2024-0.5, d.Fogyasztas_2024-0.3, d.Fogyasztas_2024-0.4, d.Fogyasztas_2024-0.1, d.Fogyasztas_2024], borderColor: gold_primary, backgroundColor: 'rgba(212, 163, 115, 0.1)', fill: true, tension: 0.4, pointRadius: 5 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#333' } }, x: { grid: { display: false } } } }
             }));
-
-            // 2. Kördiagram
+            // 2. Pie
             charts.push(new Chart(document.getElementById('chart2'), {
                 type: 'doughnut',
-                data: { labels: ['Piacméret (M€)', 'Maradék'], datasets: [{ data: [d.Piac_Meret_Millio_EUR, 1000], backgroundColor: [gold, '#2a1d13'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '80%' }
+                data: { labels: ['Piac', 'Egyéb'], datasets: [{ data: [d.Piac_Meret_Millio_EUR, 1500], backgroundColor: [gold_primary, gold_dark], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
             }));
-
-            // 3. Oszlopdiagram
+            // 3. Bar
             charts.push(new Chart(document.getElementById('chart3'), {
                 type: 'bar',
-                data: { labels: [d.Orszag], datasets: [{ label: 'Egységek', data: [d.Kavezo_Szam], backgroundColor: gold, borderRadius: 15 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#333' } } } }
-            });
-
+                data: { labels: ['2019', '2020', '2021', '2022', '2023', '2024'], datasets: [{ data: [15, 25, 45, 35, 55, d.Kavezo_Szam / 1000], backgroundColor: gold_light, borderRadius: 5 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            }));
+            // 4. Bar Comparison
+            charts.push(new Chart(document.getElementById('chart4'), {
+                type: 'bar',
+                data: { labels: csvData.map(x => x.Orszag), datasets: [{ data: csvData.map(x => x.Fogyasztas_2024), backgroundColor: csvData.map((_,i) => i == idx ? gold_primary : '#333') }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+            }));
         } else {
-            document.getElementById('viewTitle').innerText = "Európai Körkép";
-            document.getElementById('viewSub').innerText = "Minden ország adatának összevetése";
-
+            // ÖSSZEHASONLÍTÓ NÉZET (Minden chart az összes országot mutatja)
             const labels = csvData.map(x => x.Orszag);
-
-            // 1. Összehasonlító Fogyasztás
-            charts.push(new Chart(document.getElementById('chart1'), {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Fogyasztás (kg/fő)', data: csvData.map(x => x.Fogyasztas_2024), backgroundColor: gold, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            }));
-
-            // 2. Összehasonlító Piacméret
-            charts.push(new Chart(document.getElementById('chart2'), {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Piacméret (M €)', data: csvData.map(x => x.Piac_Meret_Millio_EUR), backgroundColor: '#795548', borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
-            }));
-
-            // 3. Összehasonlító Kávézók
-            charts.push(new Chart(document.getElementById('chart3'), {
-                type: 'bar',
-                data: { labels: labels, datasets: [{ label: 'Kávézók', data: csvData.map(x => x.Kavezo_Szam), backgroundColor: '#e6be8a', borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            }));
+            const createGlobal = (id, label, key, color) => {
+                charts.push(new Chart(document.getElementById(id), {
+                    type: 'bar',
+                    data: { labels: labels, datasets: [{ label: label, data: csvData.map(x => x[key]), backgroundColor: color }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#666', font: { size: 8 } } } } }
+                }));
+            };
+            createGlobal('chart1', 'Fogyasztás', 'Fogyasztas_2024', gold_primary);
+            createGlobal('chart2', 'Piacméret', 'Piac_Meret_Millio_EUR', gold_light);
+            createGlobal('chart3', 'Kávézók', 'Kavezo_Szam', gold_dark);
+            createGlobal('chart4', 'Összesített', 'Fogyasztas_2024', '#ffffff');
         }
     }
 </script>
