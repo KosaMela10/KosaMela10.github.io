@@ -31,7 +31,6 @@
         }
         .chart-container { position: relative; height: 300px; width: 100%; }
 
-        /* --- LENYÍLÓ LISTA JAVÍTÁSA --- */
         #countrySelect {
             background-color: var(--dropdown-bg);
             color: var(--gold-main);
@@ -41,14 +40,13 @@
             font-weight: bold;
             outline: none;
             cursor: pointer;
-            appearance: none; /* Egyedi nyílhoz */
+            appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4a373'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 12px center;
             background-size: 1rem;
         }
 
-        /* Ez biztosítja, hogy a listában az országok látszódjanak */
         #countrySelect option {
             background-color: var(--dropdown-bg);
             color: #ffffff;
@@ -129,7 +127,6 @@
     let charts = [];
     let isCompare = false;
 
-    // Adatok beolvasása CSV-ből
     Papa.parse(csvUrl, {
         download: true,
         header: true,
@@ -157,7 +154,6 @@
     function toggleView() {
         isCompare = !isCompare;
         document.getElementById('toggleBtn').innerText = isCompare ? "⬅️ Vissza az egyéni profilhoz" : "🚀 Teljes Európai Összehasonlítás";
-        document.getElementById('selectorArea')?.classList.toggle('opacity-20');
         render();
     }
 
@@ -173,11 +169,10 @@
         const gold = '#d4a373';
 
         if (!isCompare) {
-            // --- EGYÉNI PROFIL NÉZET ---
             document.getElementById('viewTitle').innerText = d.Orszag;
             document.getElementById('viewSub').innerText = "Kiemelt kávétípus: " + d.Kedvenc_Tipus;
 
-            // Trendvonal görbével
+            // 1. Trendvonal
             charts.push(new Chart(document.getElementById('chart1'), {
                 type: 'line',
                 data: {
@@ -197,14 +192,14 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#333' }, ticks: { color: '#888' } }, x: { grid: { display: false }, ticks: { color: '#888' } } } }
             }));
 
-            // Piacméret (Különleges kördiagram)
+            // 2. Kördiagram
             charts.push(new Chart(document.getElementById('chart2'), {
                 type: 'doughnut',
                 data: { labels: ['Piacméret (M€)', 'Maradék'], datasets: [{ data: [d.Piac_Meret_Millio_EUR, 1000], backgroundColor: [gold, '#2a1d13'], borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, cutout: '80%' }
-            });
+            }));
 
-            // Kávézók száma
+            // 3. Oszlopdiagram
             charts.push(new Chart(document.getElementById('chart3'), {
                 type: 'bar',
                 data: { labels: [d.Orszag], datasets: [{ label: 'Egységek', data: [d.Kavezo_Szam], backgroundColor: gold, borderRadius: 15 }] },
@@ -212,24 +207,26 @@
             });
 
         } else {
-            // --- ÖSSZEHASONLÍTÓ NÉZET ---
             document.getElementById('viewTitle').innerText = "Európai Körkép";
             document.getElementById('viewSub').innerText = "Minden ország adatának összevetése";
 
             const labels = csvData.map(x => x.Orszag);
 
+            // 1. Összehasonlító Fogyasztás
             charts.push(new Chart(document.getElementById('chart1'), {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Fogyasztás (kg/fő)', data: csvData.map(x => x.Fogyasztas_2024), backgroundColor: gold, borderRadius: 5 }] },
                 options: { responsive: true, maintainAspectRatio: false }
             }));
 
+            // 2. Összehasonlító Piacméret
             charts.push(new Chart(document.getElementById('chart2'), {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Piacméret (M €)', data: csvData.map(x => x.Piac_Meret_Millio_EUR), backgroundColor: '#795548', borderRadius: 5 }] },
                 options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
             }));
 
+            // 3. Összehasonlító Kávézók
             charts.push(new Chart(document.getElementById('chart3'), {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Kávézók', data: csvData.map(x => x.Kavezo_Szam), backgroundColor: '#e6be8a', borderRadius: 5 }] },
