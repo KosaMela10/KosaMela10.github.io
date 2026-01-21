@@ -52,80 +52,74 @@
 </div>
 
 <script>
-    // Dinamikus URL a cache (gyorsítótár) ellen
-    const csvUrl = 'data/kave_adatok.csv?nocache=' + new Date().getTime();
-    let chart;
+const csvUrl = 'data/kave_adatok.csv?nocache=' + new Date().getTime();
+let chart;
 
-    Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-            console.log("Beolvasott adatok:", results.data);
-            
-            if (results.data.length === 0) {
-                showError("A CSV fájl üres vagy nem tartalmaz adatokat!");
-                return;
+Papa.parse(csvUrl, {
+    download: true,
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: function (results) {
+
+        if (!results.data.length) {
+            showError("A CSV fájl üres.");
+            return;
+        }
+
+        const data = results.data;
+
+        const select = document.getElementById("countrySelect");
+        select.innerHTML = `<option disabled selected>Válassz országot...</option>`;
+
+        data.forEach((row, index) => {
+            if (row.Orszag) {
+                const opt = document.createElement("option");
+                opt.value = index;
+                opt.textContent = row.Orszag;
+                select.appendChild(opt);
             }
+        });
 
-            const data = results.data;
-            const select = document.getElementById('countrySelect');
-            select.innerHTML = '<option value="" disabled selected>Válassz országot...</option>';
+        select.onchange = () => updateUI(data[select.value]);
+    },
+    error: () => showError("Nem sikerült betölteni a CSV fájlt.")
+});
 
-            // Feltöltjük a választót a CSV-ből
-            data.forEach((row, index) => {
-                // Ellenőrizzük, hogy van-e ország név (lehet kis- vagy nagybetűs oszlopnév is)
-                const name = row.Orszag || row.orszag || row.OR_SZAG;
-                if (name) {
-                    const opt = document.createElement('option');
-                    opt.value = index;
-                    opt.text = name;
-                    select.appendChild(opt);
-                }
-            });
+function showError(msg) {
+    document.getElementById("errorBox").classList.remove("hidden");
+    document.getElementById("errorText").innerText = msg;
+}
 
-            select.onchange = function() {
-                updateUI(data[this.value]);
-            };
+function updateUI(d) {
+    document.getElementById("title").innerText = d.Orszag;
+    document.getElementById("fogyasztas").innerText = d.Fogyasztas_2024 + " kg/fő";
+    document.getElementById("piac").innerText = d.Piac_Meret_Millio_EUR + " M €";
+    document.getElementById("kavezo").innerText = d.Kavezo_Szam.toLocaleString();
+
+    const ctx = document.getElementById("mainChart");
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Egy főre jutó fogyasztás"],
+            datasets: [{
+                label: d.Orszag,
+                data: [d.Fogyasztas_2024],
+                backgroundColor: "#d4a373"
+            }]
         },
-        error: function(err) {
-            showError("Nem sikerült elérni a 'data/kave_adatok.csv' fájlt. Ellenőrizd a mappa nevét a GitHubon!");
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            }
         }
     });
-
-    function showError(msg) {
-        document.getElementById('errorBox').classList.remove('hidden');
-        document.getElementById('errorText').innerText = msg;
-    }
-
-    function updateUI(d) {
-        // Kezeljük a lehetséges elnevezési különbségeket a CSV-ben
-        const name = d.Orszag || d.orszag;
-        const cons = d.Fogyasztas_2024 || d.fogyasztas || 0;
-        const market = d.Piac_Meret_Millio_EUR || d.piac || 0;
-        const shops = d.Kavezo_Szam || d.kavezok || 0;
-
-        document.getElementById('title').innerText = name;
-        document.getElementById('fogyasztas').innerText = cons + " kg/fő";
-        document.getElementById('piac').innerText = market + " M €";
-        document.getElementById('kavezo').innerText = shops.toLocaleString();
-
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        if (chart) chart.destroy();
-        chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Egyéni fogyasztás'],
-                datasets: [{
-                    label: name,
-                    data: [cons],
-                    backgroundColor: '#d4a373'
-                }]
-            },
-            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 15 } } }
-        });
-    }
+}
 </script>
+
 </body>
 </html>
+
